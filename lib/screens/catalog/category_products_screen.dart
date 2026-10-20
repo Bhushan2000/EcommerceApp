@@ -41,7 +41,11 @@ class CategoryProductsScreen extends StatelessWidget {
               ),
               itemCount: products.length,
               itemBuilder: (context, index) {
-                return ProductCard(product: products[index]);
+                final product = products[index];
+                return ProductCard(
+                  product: product,
+                  heroTag: 'category_${category.id}_${product.id}',
+                );
               },
             ),
     );

@@ -6,10 +6,15 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/address_lookup_service.dart';
+import '../../services/payment/payment_method_model.dart';
+import '../../services/payment/payment_processor.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/bouncy_tap.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/payment/payment_widgets.dart';
 import '../checkout/map_address_picker_screen.dart';
 import '../orders/order_details_screen.dart';
 import '../orders/order_history_screen.dart';
@@ -24,6 +29,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Address Controllers
   final _nameController = TextEditingController();
   final _streetController = TextEditingController();
   final _cityController = TextEditingController();
@@ -31,12 +37,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _zipController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  String _paymentMethod = 'Credit / Debit Card';
+  // Payment Controllers & State
+  final _cardNumberController = TextEditingController();
+  final _cardHolderController = TextEditingController();
+  final _expiryController = TextEditingController();
+  final _cvvController = TextEditingController();
+  bool _saveCard = true;
+
+  final _upiController = TextEditingController();
+  String _selectedWallet = 'Apple Pay';
+  String _selectedBank = 'HDFC Bank';
+  int _selectedInstallments = 3;
+  bool _codConfirmed = true;
+
+  late final PaymentProcessor _paymentProcessor;
   bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
+    _paymentProcessor = PaymentProcessor();
+
     final user = context.read<AuthProvider>().user;
     if (user != null) {
       _nameController.text = user.displayName;
@@ -45,6 +66,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _stateController.text = user.state ?? '';
       _zipController.text = user.zipCode ?? '';
       _phoneController.text = user.phoneNumber ?? '';
+      _cardHolderController.text = user.displayName.toUpperCase();
     } else {
       _nameController.text = 'Alex Morgan';
       _streetController.text = '742 Evergreen Terrace';
@@ -52,7 +74,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _stateController.text = 'OR';
       _zipController.text = '97477';
       _phoneController.text = '+1 (555) 019-2834';
+      _cardHolderController.text = 'ALEX MORGAN';
     }
+
+    _cardNumberController.text = '4242 4242 4242 4242';
+    _expiryController.text = '12/28';
+    _cvvController.text = '888';
+    _upiController.text = 'alex.shopper@okaxis';
 
     // Auto-fetch state whenever user enters city
     _cityController.addListener(_onCityChanged);
@@ -79,6 +107,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _stateController.dispose();
     _zipController.dispose();
     _phoneController.dispose();
+
+    _cardNumberController.dispose();
+    _cardHolderController.dispose();
+    _expiryController.dispose();
+    _cvvController.dispose();
+    _upiController.dispose();
+
+    _paymentProcessor.dispose();
     super.dispose();
   }
 
@@ -116,7 +152,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
               const SizedBox(width: 10),
-              Text('Address loaded from Map: ${_streetController.text}'),
+              Expanded(
+                child: Text('Address pinned from Map: ${_streetController.text}'),
+              ),
             ],
           ),
           behavior: SnackBarBehavior.floating,
@@ -125,6 +163,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       );
     }
+  }
+
+  PaymentDetails _buildCurrentPaymentDetails() {
+    return PaymentDetails(
+      methodType: _paymentProcessor.selectedMethod,
+      cardNumber: _cardNumberController.text,
+      cardHolder: _cardHolderController.text,
+      expiryDate: _expiryController.text,
+      cvv: _cvvController.text,
+      upiId: _upiController.text,
+      walletName: _selectedWallet,
+      bankName: _selectedBank,
+      installmentsCount: _selectedInstallments,
+      codConfirmed: _codConfirmed,
+    );
   }
 
   Future<void> _handlePlaceOrder() async {
@@ -136,9 +189,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final auth = context.read<AuthProvider>();
     final orderProvider = context.read<OrderProvider>();
 
+    final paymentDetails = _buildCurrentPaymentDetails();
+    final validation = _paymentProcessor.validateDetails(paymentDetails);
+
+    if (!validation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text(validation.errorMessage ?? 'Please check payment details')),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
     });
+
+    final txResult = await _paymentProcessor.processPayment(
+      details: paymentDetails,
+      amount: cart.totalAmount,
+    );
+
+    if (!txResult.isSuccess) {
+      setState(() {
+        _isProcessing = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(txResult.message),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+      return;
+    }
 
     final shippingAddress =
         '${_nameController.text.trim()}, ${_streetController.text.trim()}, ${_cityController.text.trim()}, ${_stateController.text.trim()} ${_zipController.text.trim()} (Phone: ${_phoneController.text.trim()})';
@@ -156,7 +252,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       shippingFee: cart.shippingFee,
       total: cart.totalAmount,
       shippingAddress: shippingAddress,
-      paymentMethod: _paymentMethod,
+      paymentMethod:
+          '${_paymentProcessor.selectedMethod.displayName} (${txResult.transactionId})',
       status: OrderStatus.processing,
       createdAt: DateTime.now(),
     );
@@ -169,7 +266,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (placedId != null && mounted) {
       cart.clearCart();
-      _showSuccessDialog(newOrder);
+      _showSuccessDialog(newOrder, txResult);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -182,11 +279,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void _showSuccessDialog(OrderModel order) {
+  void _showSuccessDialog(OrderModel order, PaymentTransactionResult tx) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -196,8 +296,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.success.withAlpha(40),
-                    AppColors.success.withAlpha(20),
+                    AppColors.success.withValues(alpha: 0.25),
+                    AppColors.success.withValues(alpha: 0.1),
                   ],
                 ),
                 shape: BoxShape.circle,
@@ -205,47 +305,95 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: const Icon(
                 Icons.check_circle_rounded,
                 color: AppColors.success,
-                size: 64,
+                size: 60,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             const Text(
               'Order Placed Successfully!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(20),
+                color: AppColors.primaryTeal.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 'Order ID: ${order.id}',
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  color: AppColors.primaryTeal,
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Thank you for your purchase. We are preparing your order for shipment.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-                fontSize: 13,
-                height: 1.4,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Payment Method:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      Text(
+                        _paymentProcessor.selectedMethod.displayName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Reference ID:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      Text(
+                        tx.transactionId,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryTeal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             CustomButton(
               text: 'Track Order Status',
               icon: Icons.local_shipping_outlined,
@@ -258,13 +406,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               },
             ),
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.receipt_long_rounded, size: 18),
-              label: const Text('View All Orders'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
+            CustomButton(
+              text: 'View All Orders',
+              variant: ButtonVariant.outlined,
+              icon: Icons.receipt_long_rounded,
               onPressed: () {
                 Navigator.pop(ctx);
                 Navigator.pushReplacement(
@@ -287,14 +432,114 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Widget _buildDynamicPaymentForm() {
+    switch (_paymentProcessor.selectedMethod) {
+      case PaymentMethodType.card:
+        return CardPaymentWidget(
+          cardNumberController: _cardNumberController,
+          cardHolderController: _cardHolderController,
+          expiryController: _expiryController,
+          cvvController: _cvvController,
+          saveCard: _saveCard,
+          onSaveCardChanged: (val) => setState(() => _saveCard = val),
+        );
+      case PaymentMethodType.upi:
+        final cart = context.read<CartProvider>();
+        return UpiPaymentWidget(
+          upiController: _upiController,
+          totalAmount: cart.totalAmount,
+        );
+      case PaymentMethodType.wallets:
+        return _buildWalletsWidget();
+      case PaymentMethodType.netBanking:
+        return NetBankingWidget(
+          selectedBank: _selectedBank,
+          onBankSelected: (bank) => setState(() => _selectedBank = bank),
+        );
+      case PaymentMethodType.bnpl:
+        final cart = context.read<CartProvider>();
+        return BnplWidget(
+          totalAmount: cart.totalAmount,
+          selectedInstallments: _selectedInstallments,
+          onInstallmentsChanged: (count) => setState(() => _selectedInstallments = count),
+        );
+      case PaymentMethodType.cod:
+        return CodWidget(
+          isConfirmed: _codConfirmed,
+          onConfirmationChanged: (val) => setState(() => _codConfirmed = val),
+        );
+    }
+  }
+
+  Widget _buildWalletsWidget() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wallets = [
+      {'name': 'Apple Pay', 'icon': Icons.apple_rounded},
+      {'name': 'Google Wallet', 'icon': Icons.account_balance_wallet_rounded},
+      {'name': 'Aura Express Pay', 'icon': Icons.flash_on_rounded},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: wallets.map((w) {
+        final isSelected = _selectedWallet == w['name'];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: BouncyTap(
+            onTap: () => setState(() => _selectedWallet = w['name'] as String),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primaryTeal.withValues(alpha: isDark ? 0.2 : 0.08)
+                    : (isDark ? AppColors.darkCard : AppColors.lightCard),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primaryTeal
+                      : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(w['icon'] as IconData,
+                      color: isSelected ? AppColors.primaryTeal : Colors.grey, size: 24),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      w['name'] as String,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_off,
+                    color: isSelected ? AppColors.primaryTeal : Colors.grey,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: const CustomAppBar(
+        title: 'Checkout',
+        subtitle: 'Review & Complete Payment',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -306,42 +551,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               // Visual Step Indicator
               Row(
                 children: [
-                  _buildStepBadge(step: '1', title: 'Address', isActive: true, isDone: false, isDark: isDark),
+                  _buildStepBadge(
+                      step: '1', title: 'Address', isActive: true, isDark: isDark),
                   Expanded(
                     child: Container(
                       height: 2,
-                      color: AppColors.primary,
+                      color: AppColors.primaryTeal,
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
-                  _buildStepBadge(step: '2', title: 'Payment', isActive: true, isDone: false, isDark: isDark),
+                  _buildStepBadge(
+                      step: '2', title: 'Payment', isActive: true, isDark: isDark),
                   Expanded(
                     child: Container(
                       height: 2,
-                      color: isDark ? Colors.white12 : Colors.grey.shade300,
+                      color: AppColors.primaryTeal.withValues(alpha: 0.4),
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
-                  _buildStepBadge(step: '3', title: 'Confirm', isActive: false, isDone: false, isDark: isDark),
+                  _buildStepBadge(
+                      step: '3', title: 'Confirm', isActive: false, isDark: isDark),
                 ],
               ),
-
               const SizedBox(height: 24),
 
-              // Shipping Address Card with Google Map Button
+              // Shipping Address Card with Google Map Pin Button
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.cardDark : Colors.white,
+                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(isDark ? 20 : 5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
@@ -351,27 +598,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
-                            SizedBox(width: 8),
+                            const Icon(Icons.location_on_rounded,
+                                color: AppColors.primaryTeal, size: 20),
+                            const SizedBox(width: 8),
                             Text(
                               'Shipping Address',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
-                        // Google Map Picker Button
-                        GestureDetector(
+                        // Google Map Picker Button with Bouncy Micro-interaction
+                        BouncyTap(
                           onTap: _openMapPicker,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              gradient: AppGradients.primaryGradient,
+                              gradient: AppColors.primaryGradient,
                               borderRadius: BorderRadius.circular(10),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withAlpha(60),
+                                  color: AppColors.primaryTeal.withValues(alpha: 0.3),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -401,7 +651,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       controller: _nameController,
                       label: 'Full Name',
                       hint: 'e.g. Alex Morgan',
-                      prefixIcon: Icons.person_outline,
+                      prefixIcon: Icons.person_outline_rounded,
                       validator: (val) =>
                           val == null || val.trim().isEmpty ? 'Required' : null,
                     ),
@@ -467,74 +717,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
 
-              // Payment Method Section
+              // Interactive Payment Selector & Dynamic Subforms
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.cardDark : Colors.white,
+                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(isDark ? 20 : 5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.payment_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Payment Method',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    PaymentMethodSelector(
+                      selectedMethod: _paymentProcessor.selectedMethod,
+                      onMethodSelected: (m) {
+                        setState(() {
+                          _paymentProcessor.selectMethod(m);
+                        });
+                      },
                     ),
-                    const SizedBox(height: 14),
-                    _buildPaymentOption(
-                      title: 'Credit / Debit Card',
-                      icon: Icons.credit_card_rounded,
-                      subtitle: 'Visa, Mastercard, Amex',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildPaymentOption(
-                      title: 'Apple Pay / Google Pay',
-                      icon: Icons.contactless_rounded,
-                      subtitle: 'Instant one-tap digital checkout',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildPaymentOption(
-                      title: 'Cash on Delivery',
-                      icon: Icons.local_atm_rounded,
-                      subtitle: 'Pay cash upon package arrival',
-                      isDark: isDark,
-                    ),
+                    const SizedBox(height: 20),
+                    const Divider(height: 1),
+                    const SizedBox(height: 20),
+                    _buildDynamicPaymentForm(),
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
 
               // Final Bill Overview
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.cardDark : Colors.grey.shade50,
+                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                   ),
                 ),
                 child: Column(
@@ -544,7 +773,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       children: [
                         Text('Items in Cart',
                             style: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                               fontSize: 13,
                             )),
                         Text('${cart.itemCount} items',
@@ -557,7 +788,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       children: [
                         Text('Subtotal',
                             style: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                               fontSize: 13,
                             )),
                         Text(Formatters.formatCurrency(cart.subtotal),
@@ -570,10 +803,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Discount',
-                              style: TextStyle(color: AppColors.secondary, fontSize: 13)),
+                              style: TextStyle(
+                                  color: AppColors.sunsetCoral, fontSize: 13)),
                           Text('-${Formatters.formatCurrency(cart.discountAmount)}',
                               style: const TextStyle(
-                                  color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                                  color: AppColors.sunsetCoral,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ],
@@ -582,15 +817,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Total Amount Payable',
+                          'Total Payable',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         Text(
                           Formatters.formatCurrency(cart.totalAmount),
                           style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.primaryTeal,
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -599,12 +834,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 28),
 
               CustomButton(
-                text: 'Confirm & Place Order',
-                icon: Icons.check_circle_outline,
+                text: 'Authorize & Place Order',
+                icon: Icons.lock_outline_rounded,
                 isLoading: _isProcessing,
                 onPressed: _handlePlaceOrder,
               ),
@@ -620,7 +854,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String step,
     required String title,
     required bool isActive,
-    required bool isDone,
     required bool isDark,
   }) {
     return Row(
@@ -630,13 +863,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive ? AppColors.primary : (isDark ? Colors.white12 : Colors.grey.shade300),
+            color: isActive
+                ? AppColors.primaryTeal
+                : (isDark ? AppColors.darkBorder : Colors.grey.shade300),
           ),
           child: Center(
             child: Text(
               step,
               style: TextStyle(
-                color: isActive ? Colors.white : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                color: isActive
+                    ? Colors.white
+                    : (isDark ? AppColors.darkTextSecondary : Colors.grey.shade700),
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -649,87 +886,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? AppColors.primary : (isDark ? Colors.grey.shade400 : Colors.grey.shade500),
+            color: isActive
+                ? AppColors.primaryTeal
+                : (isDark ? AppColors.darkTextSecondary : Colors.grey.shade500),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildPaymentOption({
-    required String title,
-    required IconData icon,
-    required String subtitle,
-    required bool isDark,
-  }) {
-    final isSelected = _paymentMethod == title;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _paymentMethod = title;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withAlpha(isDark ? 30 : 15)
-              : (isDark ? Colors.white.withAlpha(5) : Colors.grey.shade50),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary
-                : (isDark ? Colors.white12 : Colors.grey.shade200),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withAlpha(30)
-                    : (isDark ? Colors.white10 : Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? AppColors.primary : Colors.grey,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: isSelected ? AppColors.primary : null,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              isSelected ? Icons.check_circle_rounded : Icons.radio_button_off,
-              color: isSelected ? AppColors.primary : Colors.grey.shade400,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -5,6 +5,8 @@ import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/bouncy_tap.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../catalog/product_details_screen.dart';
 
@@ -485,11 +487,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Order ${_currentOrder.id}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+      appBar: CustomAppBar(
+        title: 'Order Details',
+        subtitle: _currentOrder.id,
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert_rounded),
@@ -893,12 +893,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = _currentOrder.items[index];
-                return GestureDetector(
+                final heroTag = 'order_${_currentOrder.id}_${item.product.id}_$index';
+                return BouncyTap(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProductDetailsScreen(product: item.product),
+                        builder: (_) => ProductDetailsScreen(
+                          product: item.product,
+                          heroTag: heroTag,
+                        ),
                       ),
                     );
                   },
@@ -919,12 +923,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             width: 64,
                             height: 64,
                             color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
-                            child: CachedNetworkImage(
-                              imageUrl: item.product.mainImage,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, _, _) => const Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 20,
+                            child: Hero(
+                              tag: heroTag,
+                              child: CachedNetworkImage(
+                                imageUrl: item.product.mainImage,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, _, _) => const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  size: 20,
+                                ),
                               ),
                             ),
                           ),

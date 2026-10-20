@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/bouncy_tap.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/empty_state_view.dart';
 import 'checkout_screen.dart';
@@ -67,9 +69,9 @@ class _CartScreenState extends State<CartScreen> {
 
     if (cart.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Shopping Cart'),
-          elevation: 0,
+        appBar: const CustomAppBar(
+          title: 'Shopping Cart',
+          showBackButton: false,
         ),
         body: EmptyStateView(
           icon: Icons.shopping_cart_outlined,
@@ -85,11 +87,10 @@ class _CartScreenState extends State<CartScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Cart (${cart.itemCount})',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+      appBar: CustomAppBar(
+        title: 'Cart (${cart.itemCount})',
+        subtitle: 'Review & Checkout',
+        showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
@@ -248,26 +249,24 @@ class _CartScreenState extends State<CartScreen> {
                                   Container(
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? Colors.white10
+                                          ? AppColors.darkCard
                                           : Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: isDark ? Colors.white12 : Colors.grey.shade300,
+                                        color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.remove_rounded, size: 16),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 32,
-                                            minHeight: 32,
-                                          ),
-                                          onPressed: () {
+                                        BouncyTap(
+                                          onTap: () {
                                             cart.updateQuantity(
                                                 item.id, item.quantity - 1);
                                           },
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(6.0),
+                                            child: Icon(Icons.remove_rounded, size: 16),
+                                          ),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -279,17 +278,15 @@ class _CartScreenState extends State<CartScreen> {
                                             ),
                                           ),
                                         ),
-                                        IconButton(
-                                          icon: const Icon(Icons.add_rounded, size: 16),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 32,
-                                            minHeight: 32,
-                                          ),
-                                          onPressed: () {
+                                        BouncyTap(
+                                          onTap: () {
                                             cart.updateQuantity(
                                                 item.id, item.quantity + 1);
                                           },
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(6.0),
+                                            child: Icon(Icons.add_rounded, size: 16),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -333,28 +330,34 @@ class _CartScreenState extends State<CartScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Preset Chips
+                  // Preset Chips with BouncyTap
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: _quickCoupons.map((coupon) {
                       final isCurrent = cart.appliedPromoCode == coupon['code'];
-                      return ActionChip(
-                        label: Text('${coupon['code']} (${coupon['label']})'),
-                        labelStyle: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isCurrent ? Colors.white : AppColors.primary,
-                        ),
-                        backgroundColor: isCurrent
-                            ? AppColors.primary
-                            : AppColors.primary.withAlpha(20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: isCurrent ? AppColors.primary : Colors.transparent,
+                      return BouncyTap(
+                        onTap: () => _applyCode(coupon['code'] as String, cart),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isCurrent
+                                ? AppColors.primaryTeal
+                                : AppColors.primaryTeal.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isCurrent ? AppColors.primaryTeal : Colors.transparent,
+                            ),
+                          ),
+                          child: Text(
+                            '${coupon['code']} (${coupon['label']})',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isCurrent ? Colors.white : AppColors.primaryTeal,
+                            ),
                           ),
                         ),
-                        onPressed: () => _applyCode(coupon['code'] as String, cart),
                       );
                     }).toList(),
                   ),

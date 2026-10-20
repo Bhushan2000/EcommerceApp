@@ -10,10 +10,12 @@ import '../utils/formatters.dart';
 
 class ProductCard extends StatefulWidget {
   final ProductModel product;
+  final String? heroTag;
 
   const ProductCard({
     super.key,
     required this.product,
+    this.heroTag,
   });
 
   @override
@@ -48,6 +50,7 @@ class _ProductCardState extends State<ProductCard> {
     final cartProvider = context.read<CartProvider>();
     final isWishlisted = wishlistProvider.isInWishlist(widget.product.id);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveHeroTag = widget.heroTag ?? 'product_img_${widget.product.id}';
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isCardPressed = true),
@@ -56,7 +59,10 @@ class _ProductCardState extends State<ProductCard> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProductDetailsScreen(product: widget.product),
+            builder: (_) => ProductDetailsScreen(
+              product: widget.product,
+              heroTag: effectiveHeroTag,
+            ),
           ),
         );
       },
@@ -88,7 +94,7 @@ class _ProductCardState extends State<ProductCard> {
                     child: AspectRatio(
                       aspectRatio: 1.25,
                       child: Hero(
-                        tag: 'product_img_${widget.product.id}',
+                        tag: effectiveHeroTag,
                         child: CachedNetworkImage(
                           imageUrl: widget.product.mainImage,
                           fit: BoxFit.cover,

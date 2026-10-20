@@ -7,6 +7,7 @@ import '../../providers/product_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/banner_carousel.dart';
+import '../../widgets/bouncy_tap.dart';
 import '../../widgets/category_chip.dart';
 import '../../widgets/product_card.dart';
 import '../catalog/search_screen.dart';
@@ -298,7 +299,7 @@ class HomeScreen extends StatelessWidget {
             slivers: [
               // Top Location Bar (Amazon / Blinkit Style)
               SliverToBoxAdapter(
-                child: GestureDetector(
+                child: BouncyTap(
                   onTap: () => _showAddressSelector(context),
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(20, 10, 20, 4),
@@ -375,7 +376,7 @@ class HomeScreen extends StatelessWidget {
                       Row(
                         children: [
                           // Notification Bell with Badge
-                          GestureDetector(
+                          BouncyTap(
                             onTap: () => _showNotifications(context),
                             child: Container(
                               width: 42,
@@ -419,7 +420,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           // User Avatar Link to Profile
-                          GestureDetector(
+                          BouncyTap(
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -465,7 +466,7 @@ class HomeScreen extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: GestureDetector(
+                  child: BouncyTap(
                     onTap: () {
                       Navigator.push(
                         context,
@@ -532,7 +533,7 @@ class HomeScreen extends StatelessWidget {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                    child: GestureDetector(
+                    child: BouncyTap(
                       onTap: () {
                         Navigator.push(
                           context,
@@ -597,7 +598,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       if (productProvider.selectedCategory != null)
-                        GestureDetector(
+                        BouncyTap(
                           onTap: () => productProvider.selectCategory(null),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -738,10 +739,12 @@ class HomeScreen extends StatelessWidget {
                       itemCount: productProvider.flashSaleProducts.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 14),
                       itemBuilder: (context, index) {
+                        final product = productProvider.flashSaleProducts[index];
                         return SizedBox(
                           width: 175,
                           child: ProductCard(
-                            product: productProvider.flashSaleProducts[index],
+                            product: product,
+                            heroTag: 'flash_sale_${product.id}',
                           ),
                         );
                       },
@@ -840,8 +843,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
+                        final product = productProvider.filteredProducts[index];
                         return ProductCard(
-                          product: productProvider.filteredProducts[index],
+                          product: product,
+                          heroTag: 'home_grid_${product.id}',
                         );
                       },
                       childCount: productProvider.filteredProducts.length,

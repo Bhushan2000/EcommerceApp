@@ -43,8 +43,31 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // Compile-time configurable API keys (pass via --dart-define=KEY=value)
+  // Protected from repository exposure to satisfy Secret Scanning.
+  static const String _webApiKey = String.fromEnvironment(
+    'FIREBASE_WEB_API_KEY',
+    defaultValue: 'YOUR_FIREBASE_WEB_API_KEY',
+  );
+  static const String _androidApiKey = String.fromEnvironment(
+    'FIREBASE_ANDROID_API_KEY',
+    defaultValue: 'YOUR_FIREBASE_ANDROID_API_KEY',
+  );
+  static const String _iosApiKey = String.fromEnvironment(
+    'FIREBASE_IOS_API_KEY',
+    defaultValue: 'YOUR_FIREBASE_IOS_API_KEY',
+  );
+  static const String _macosApiKey = String.fromEnvironment(
+    'FIREBASE_MACOS_API_KEY',
+    defaultValue: 'YOUR_FIREBASE_MACOS_API_KEY',
+  );
+  static const String _windowsApiKey = String.fromEnvironment(
+    'FIREBASE_WINDOWS_API_KEY',
+    defaultValue: 'YOUR_FIREBASE_WINDOWS_API_KEY',
+  );
+
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCCB_6CSxSK1tU1kfub5e5TucN5-KKgyUA',
+    apiKey: _webApiKey,
     appId: '1:298676767374:web:d34add9078b2b4616a57df',
     messagingSenderId: '298676767374',
     projectId: 'ecommerce-app-flutter-2026',
@@ -53,14 +76,14 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDLQKspw7UHtbPt1SSbpJ9Q34Z_kRLu4NI',
+    apiKey: _androidApiKey,
     appId: '1:298676767374:android:0902698d34cdf6256a57df',
     messagingSenderId: '298676767374',
     projectId: 'ecommerce-app-flutter-2026',
     storageBucket: 'ecommerce-app-flutter-2026.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCTX40293b1qH35UKf-xSUJYRn8PHSJh8A',
+    apiKey: _iosApiKey,
     appId: '1:298676767374:ios:99b9ba167849b6146a57df',
     messagingSenderId: '298676767374',
     projectId: 'ecommerce-app-flutter-2026',
@@ -68,7 +91,7 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.antigravity.ecommerce.ecommerceApp',
   );
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCTX40293b1qH35UKf-xSUJYRn8PHSJh8A',
+    apiKey: _macosApiKey,
     appId: '1:298676767374:ios:99b9ba167849b6146a57df',
     messagingSenderId: '298676767374',
     projectId: 'ecommerce-app-flutter-2026',
@@ -77,7 +100,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCCB_6CSxSK1tU1kfub5e5TucN5-KKgyUA',
+    apiKey: _windowsApiKey,
     appId: '1:298676767374:web:897c4d79d47a39236a57df',
     messagingSenderId: '298676767374',
     projectId: 'ecommerce-app-flutter-2026',

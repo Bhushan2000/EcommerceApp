@@ -8,6 +8,8 @@ import '../../providers/theme_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/constants.dart';
+import '../../widgets/bouncy_tap.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../auth/login_screen.dart';
 import '../cart/cart_screen.dart';
 import '../orders/order_history_screen.dart';
@@ -29,8 +31,9 @@ class ProfileScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: CustomAppBar(
+        title: 'My Profile',
+        showBackButton: false,
         actions: [
           IconButton(
             icon: Icon(
@@ -414,9 +417,8 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildStatItem(BuildContext context, String label, String value, {VoidCallback? onTap}) {
-    return GestureDetector(
+    return BouncyTap(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Column(
         children: [
           Text(
@@ -424,7 +426,7 @@ class ProfileScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: AppColors.primary,
+              color: AppColors.primaryTeal,
             ),
           ),
           const SizedBox(height: 2),
@@ -466,47 +468,50 @@ class ProfileScreen extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context),
+    return BouncyTap(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.border(context),
+          ),
         ),
-      ),
-      child: Material(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-          onTap: onTap,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(20),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary(context),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: trailing ??
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+        child: Material(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryTeal.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
+              child: Icon(icon, color: AppColors.primaryTeal, size: 20),
+            ),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            ),
+            subtitle: Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: trailing ??
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+          ),
         ),
       ),
     );

@@ -9,14 +9,17 @@ import '../../providers/product_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/bouncy_tap.dart';
 import '../../widgets/custom_button.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final ProductModel product;
+  final String? heroTag;
 
   const ProductDetailsScreen({
     super.key,
     required this.product,
+    this.heroTag,
   });
 
   @override
@@ -290,7 +293,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     color: isDark ? AppColors.cardDark : Colors.grey.shade100,
                   ),
                   child: Hero(
-                    tag: 'product_img_${widget.product.id}',
+                    tag: widget.heroTag ?? 'product_img_${widget.product.id}',
                     child: CachedNetworkImage(
                       imageUrl: images[_selectedImageIndex],
                       fit: BoxFit.cover,
@@ -361,7 +364,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final isSelected = index == _selectedImageIndex;
-                    return GestureDetector(
+                    return BouncyTap(
                       onTap: () {
                         setState(() {
                           _selectedImageIndex = index;
@@ -612,7 +615,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       spacing: 10,
                       children: widget.product.availableColors.map((color) {
                         final isSelected = _selectedColor == color;
-                        return GestureDetector(
+                        return BouncyTap(
                           onTap: () {
                             setState(() {
                               _selectedColor = color;
@@ -623,18 +626,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark ? AppColors.cardDark : Colors.grey.shade100),
+                                  ? AppColors.primaryTeal
+                                  : (isDark ? AppColors.darkCard : Colors.grey.shade100),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: isSelected
-                                    ? AppColors.primary
-                                    : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                    ? AppColors.primaryTeal
+                                    : (isDark ? AppColors.darkBorder : Colors.grey.shade300),
                               ),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withAlpha(60),
+                                        color: AppColors.primaryTeal.withValues(alpha: 0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -682,7 +685,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       spacing: 10,
                       children: widget.product.availableSizes.map((size) {
                         final isSelected = _selectedSize == size;
-                        return GestureDetector(
+                        return BouncyTap(
                           onTap: () {
                             setState(() {
                               _selectedSize = size;
@@ -695,18 +698,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark ? AppColors.cardDark : Colors.grey.shade100),
+                                  ? AppColors.primaryTeal
+                                  : (isDark ? AppColors.darkCard : Colors.grey.shade100),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected
-                                    ? AppColors.primary
-                                    : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                    ? AppColors.primaryTeal
+                                    : (isDark ? AppColors.darkBorder : Colors.grey.shade300),
                               ),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withAlpha(60),
+                                        color: AppColors.primaryTeal.withValues(alpha: 0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -740,19 +743,20 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       const Spacer(),
                       Container(
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.cardDark : Colors.grey.shade100,
+                          color: isDark ? AppColors.darkCard : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: isDark ? Colors.white12 : Colors.grey.shade300,
+                            color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
                           ),
                         ),
                         child: Row(
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove_rounded, size: 18),
-                              onPressed: _quantity > 1
-                                  ? () => setState(() => _quantity--)
-                                  : null,
+                            BouncyTap(
+                              onTap: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Icon(Icons.remove_rounded, size: 18),
+                              ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -764,9 +768,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 ),
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              onPressed: () => setState(() => _quantity++),
+                            BouncyTap(
+                              onTap: () => setState(() => _quantity++),
+                              child: const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Icon(Icons.add_rounded, size: 18),
+                              ),
                             ),
                           ],
                         ),

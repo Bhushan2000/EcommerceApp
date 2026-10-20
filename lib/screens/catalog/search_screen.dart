@@ -29,6 +29,15 @@ class _SearchScreenState extends State<SearchScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    final query = context.read<ProductProvider>().searchQuery;
+    if (query.isNotEmpty) {
+      _searchController.text = query;
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -202,14 +211,19 @@ class _SearchScreenState extends State<SearchScreen> {
     final productProvider = context.watch<ProductProvider>();
     final products = productProvider.filteredProducts;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasActiveFilters = productProvider.selectedCategory != null ||
+        productProvider.maxPrice != null ||
+        productProvider.sortOption != ProductSortOption.featured;
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0,
         title: Container(
           height: 44,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: isDark ? AppColors.cardDark : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(0),
             border: Border.all(
               color: isDark ? Colors.white12 : Colors.grey.shade300,
             ),
@@ -217,24 +231,27 @@ class _SearchScreenState extends State<SearchScreen> {
           child: TextField(
             controller: _searchController,
             autofocus: false,
+            textAlignVertical: TextAlignVertical.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
             decoration: InputDecoration(
+              isDense: true,
               hintText: 'Search products, tags, brands...',
               hintStyle: TextStyle(
                 color: isDark ? Colors.white38 : Colors.grey.shade400,
                 fontSize: 14,
               ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
-                size: 20,
-              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: Icon(
+                        Icons.cancel_rounded,
+                        size: 18,
+                        color: isDark ? Colors.white54 : Colors.grey.shade600,
+                      ),
                       onPressed: () {
                         _searchController.clear();
                         productProvider.setSearchQuery('');
@@ -242,6 +259,10 @@ class _SearchScreenState extends State<SearchScreen> {
                       },
                     )
                   : null,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
             onChanged: (query) {
               productProvider.setSearchQuery(query);
@@ -251,15 +272,21 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: 12.0),
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(25),
+                color: hasActiveFilters ? AppColors.primary : AppColors.primary.withAlpha(25),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  Icons.tune_rounded,
+                  color: hasActiveFilters ? Colors.white : AppColors.primary,
+                  size: 20,
+                ),
                 onPressed: () => _showFilterModal(context),
               ),
             ),
@@ -381,7 +408,11 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
-                      return ProductCard(product: products[index]);
+                      final product = products[index];
+                      return ProductCard(
+                        product: product,
+                        heroTag: 'search_${product.id}',
+                      );
                     },
                   ),
           ),

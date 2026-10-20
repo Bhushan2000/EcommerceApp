@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/bouncy_tap.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state_view.dart';
 import 'order_details_screen.dart';
 
@@ -31,8 +33,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Orders', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: CustomAppBar(
+        title: 'My Orders',
+        subtitle: '${orderProvider.orders.length} placed',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -45,7 +48,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         ],
       ),
       body: orderProvider.isLoading && orderProvider.orders.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryTeal))
           : orderProvider.orders.isEmpty
               ? EmptyStateView(
                   icon: Icons.receipt_long_outlined,
@@ -58,7 +61,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   },
                 )
               : RefreshIndicator(
-                  color: AppColors.primary,
+                  color: AppColors.primaryTeal,
                   onRefresh: () async {
                     final user = context.read<AuthProvider>().user;
                     await orderProvider.loadUserOrders(user?.id ?? '');
@@ -69,7 +72,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final order = orderProvider.orders[index];
-                      return GestureDetector(
+                      return BouncyTap(
                         onTap: () async {
                           await Navigator.push(
                             context,

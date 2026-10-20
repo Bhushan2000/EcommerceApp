@@ -24,36 +24,55 @@ class AppConstants {
 }
 
 class AppColors {
-  // Brand Primary: Modern Electric Indigo & Royal Violet
-  static const Color primary = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFF6366F1);
-  static const Color primaryDark = Color(0xFF3730A3);
+  // Brand Primary: Modern Oceanic Teal & Electric Mint
+  static const Color primary = Color(0xFF0D9488);
+  static const Color primaryLight = Color(0xFF14B8A6);
+  static const Color primaryDark = Color(0xFF0F766E);
 
-  // Secondary Accent: Electric Rose & Vibrant Coral
-  static const Color secondary = Color(0xFFF43F5E);
-  static const Color secondaryLight = Color(0xFFFB7185);
-  static const Color secondaryDark = Color(0xFFE11D48);
+  // Secondary Accent: Vibrant Sunset Coral & Tangerine
+  static const Color secondary = Color(0xFFFF5722);
+  static const Color secondaryLight = Color(0xFFFF7A59);
+  static const Color secondaryDark = Color(0xFFE64A19);
 
   // Warm Amber & Gold for Ratings & Featured badges
   static const Color accent = Color(0xFFF59E0B);
   static const Color accentLight = Color(0xFFFBBF24);
 
   // Neutral Tones - Light Mode
-  static const Color surfaceLight = Color(0xFFF8FAFC);
+  static const Color surfaceLight = Color(0xFFF6F9FA);
   static const Color cardLight = Colors.white;
   static const Color borderLight = Color(0xFFE2E8F0);
   static const Color textPrimaryLight = Color(0xFF0F172A);
   static const Color textSecondaryLight = Color(0xFF64748B);
   static const Color textMutedLight = Color(0xFF94A3B8);
 
-  // Neutral Tones - Dark Mode (Rich Obsidian Palette)
-  static const Color surfaceDark = Color(0xFF090D16);
-  static const Color cardDark = Color(0xFF131A2A);
-  static const Color cardDarkElevated = Color(0xFF1E273A);
-  static const Color borderDark = Color(0xFF243046);
+  // Neutral Tones - Dark Mode (Luxe Obsidian Teal Palette)
+  static const Color surfaceDark = Color(0xFF070F14);
+  static const Color cardDark = Color(0xFF0E1A22);
+  static const Color cardDarkElevated = Color(0xFF152632);
+  static const Color borderDark = Color(0xFF1E3545);
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
   static const Color textMutedDark = Color(0xFF64748B);
+
+  // Convenient Theme Palette Aliases
+  static const Color primaryTeal = primary;
+  static const Color electricMint = primaryLight;
+  static const Color deepPine = primaryDark;
+  static const Color sunsetCoral = secondary;
+  static const Color warmGold = accent;
+
+  static const Color darkCard = cardDark;
+  static const Color lightCard = cardLight;
+  static const Color darkBorder = borderDark;
+  static const Color lightBorder = borderLight;
+  static const Color darkSurface = surfaceDark;
+  static const Color lightSurface = surfaceLight;
+
+  static const Color darkTextPrimary = textPrimaryDark;
+  static const Color lightTextPrimary = textPrimaryLight;
+  static const Color darkTextSecondary = textSecondaryDark;
+  static const Color lightTextSecondary = textSecondaryLight;
 
   // Adaptive Theme Helpers
   static Color surface(BuildContext context) =>
@@ -81,23 +100,29 @@ class AppColors {
   static const Color success = Color(0xFF10B981);
   static const Color error = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
-  static const Color info = Color(0xFF3B82F6);
+  static const Color info = Color(0xFF0284C7);
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+    colors: [Color(0xFF14B8A6), Color(0xFF0D9488)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient secondaryGradient = LinearGradient(
-    colors: [Color(0xFFFB7185), Color(0xFFF43F5E)],
+    colors: [Color(0xFFFF7A59), Color(0xFFFF5722)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient darkCardGradient = LinearGradient(
-    colors: [Color(0xFF1E273A), Color(0xFF131A2A)],
+    colors: [Color(0xFF152632), Color(0xFF0E1A22)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -107,6 +132,7 @@ class AppGradients {
   static const LinearGradient primaryGradient = AppColors.primaryGradient;
   static const LinearGradient secondaryGradient = AppColors.secondaryGradient;
   static const LinearGradient darkCardGradient = AppColors.darkCardGradient;
+  static const LinearGradient accentGradient = AppColors.accentGradient;
 }
 
 class AppStyles {
